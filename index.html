@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今日の献立マスター</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+      background: #e9f0e5;
+      color: #24352d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 28px 16px 40px;
+    }
+    .game-shell { width: min(100%, 920px); }
+    header { text-align: center; margin-bottom: 22px; }
+    .kicker { color: #e8894a; font-size: 12px; font-weight: 700; letter-spacing: .18em; margin-bottom: 7px; }
+    h1 { color: #315b45; font-size: clamp(28px, 5vw, 42px); letter-spacing: .04em; }
+    .subtitle { color: #6d7d73; font-size: 14px; margin-top: 8px; }
+    #player-info { color: #6d7d73; font-size: 12px; margin-top: 10px; }
+    .layout { display: grid; grid-template-columns: 1.35fr .8fr; gap: 18px; align-items: start; }
+    .panel { background: #fffdf7; border: 1px solid rgba(72, 101, 75, .12); border-radius: 18px; box-shadow: 0 18px 45px rgba(54, 73, 57, .12); padding: 22px; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1px solid #e5dfcf; padding-bottom: 14px; margin-bottom: 16px; }
+    h2 { font-size: 19px; color: #315b45; }
+    .round { color: #e8894a; font-size: 12px; font-weight: 700; }
+    .categories { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .category:last-child { grid-column: 1 / -1; }
+    .category-title { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+    .category-title span { color: #6d7d73; font-size: 11px; font-weight: 400; }
+    .choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    button { font: inherit; cursor: pointer; transition: transform .18s, border-color .18s, background .18s; }
+    .choice { background: #fff; border: 1px solid #e5dfcf; border-radius: 10px; color: #24352d; padding: 10px 7px; min-height: 62px; text-align: left; }
+    .choice:hover { border-color: #4f8065; transform: translateY(-2px); }
+    .choice.selected { background: #e6f1e5; border: 2px solid #4f8065; padding: 9px 6px; }
+    .choice.danger { background: #fff4f0; border-color: #e5a18c; }
+    .choice.danger:hover { border-color: #d45f3e; }
+    .choice.danger.selected { background: #ffe1d8; border-color: #d45f3e; }
+    .choice.danger .detail { color: #c04f35; font-weight: 700; }
+    .food { display: block; font-size: 16px; font-weight: 700; }
+    .detail { color: #6d7d73; display: block; font-size: 10px; margin-top: 3px; }
+    .menu-board { background: #f8f2e5; border: 1px dashed #d8cdae; border-radius: 13px; padding: 16px; margin-bottom: 16px; }
+    .menu-board h3 { color: #315b45; font-size: 13px; margin-bottom: 11px; }
+    .menu-items { display: grid; gap: 7px; }
+    .menu-item { align-items: center; background: rgba(255,255,255,.7); border-radius: 8px; display: flex; font-size: 13px; justify-content: space-between; padding: 8px 10px; }
+    .menu-item strong { color: #315b45; }
+    .empty { color: #6d7d73; font-size: 12px; padding: 10px 0; }
+    .score-box { text-align: center; }
+    .score-label { color: #6d7d73; font-size: 12px; }
+    .score { color: #e8894a; font-size: 52px; font-weight: 800; line-height: 1.1; margin: 4px 0 14px; }
+    .meter { background: #e8e5d9; border-radius: 99px; height: 8px; overflow: hidden; }
+    .meter-fill { background: #4f8065; border-radius: inherit; height: 100%; transition: width .35s; width: 0; }
+    .score-breakdown { display: grid; gap: 10px; margin: 18px 0; text-align: left; }
+    .score-row { display: flex; justify-content: space-between; font-size: 12px; }
+    .score-row span:last-child { color: #315b45; font-weight: 700; }
+    .tip { border-top: 1px solid #e5dfcf; color: #6d7d73; font-size: 12px; line-height: 1.7; padding-top: 14px; text-align: left; }
+    .actions { display: grid; gap: 9px; margin-top: 18px; }
+    .primary, .secondary { border: 0; border-radius: 9px; font-weight: 700; padding: 13px 16px; }
+    .primary { background: #4f8065; color: #fff; }
+    .primary:hover { background: #315b45; transform: translateY(-1px); }
+    .primary:disabled { background: #b8c2b8; cursor: not-allowed; transform: none; }
+    .secondary { background: transparent; border: 1px solid #e5dfcf; color: #6d7d73; }
+    .secondary:hover { border-color: #e8894a; color: #e8894a; }
+    .result-screen { background: #fffdf7; border: 1px solid rgba(72, 101, 75, .12); border-radius: 18px; box-shadow: 0 18px 45px rgba(54, 73, 57, .12); padding: 42px 22px; text-align: center; }
+    .result-screen h2 { font-size: 24px; margin-bottom: 12px; }
+    .result-comment { color: #6d7d73; font-size: 15px; margin-bottom: 12px; }
+    .result-score { color: #e8894a; font-size: clamp(72px, 15vw, 120px); font-weight: 800; line-height: 1; margin: 4px 0 10px; }
+    .result-unit { color: #315b45; font-size: 18px; font-weight: 700; }
+    .result-actions { display: flex; justify-content: center; gap: 10px; margin: 28px auto 0; max-width: 360px; }
+    .result-actions button { flex: 1; }
+    .hidden { display: none; }
+    #status { color: #315b45; font-size: 12px; min-height: 18px; margin-top: 12px; text-align: center; }
+    @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } .panel { padding: 16px; } }
+    @media (max-width: 430px) { .categories { grid-template-columns: 1fr; } .category:last-child { grid-column: auto; } }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <header><div class="kicker">KONDATE CHALLENGE</div><h1>今日の献立マスター</h1><p class="subtitle">5つの料理を選んで、栄養と彩りのよい献立を作ろう。組み合わせ次第でスコアが変わります。</p><div id="player-info">ひとりで挑戦中</div></header>
+    <div class="layout">
+      <section class="panel"><div class="panel-heading"><h2>食材を選んで献立を完成</h2><span class="round">全5品</span></div><div class="categories" id="categories"></div><div id="status" aria-live="polite"></div></section>
+      <aside class="panel">
+        <div class="menu-board"><h3>あなたの献立</h3><div class="menu-items" id="menu-items"><div class="empty">まだ料理が選ばれていません</div></div></div>
+        <div class="score-box"><div class="score-label">現在の献立スコア</div><div class="score" id="score">0</div><div class="meter"><div class="meter-fill" id="meter-fill"></div></div></div>
+        <div class="score-breakdown"><div class="score-row"><span>栄養バランス</span><span id="balance-score">0 / 35</span></div><div class="score-row"><span>食材の彩り</span><span id="color-score">0 / 25</span></div><div class="score-row"><span>予算センス</span><span id="budget-score">0 / 20</span></div><div class="score-row"><span>品数ボーナス</span><span id="variety-score">0 / 20</span></div><div class="score-row"><span>危険メニュー</span><span id="penalty-score">0点</span></div></div>
+        <p class="tip" id="tip">5品そろえると、献立を決定できます。</p><div class="actions"><button class="primary" id="submit" disabled>献立を決定する</button><!-- <button class="secondary" id="btn-close">やめる</button> --></div>
+      </aside>
+    </div>
+    <section class="result-screen hidden" id="result-screen" aria-live="polite">
+      <h2>献立が完成しました！</h2>
+      <p class="result-comment" id="result-comment"></p>
+      <div class="result-score" id="result-score">0</div>
+      <div class="result-unit">点</div>
+      <div class="result-actions"><button class="primary" id="btn-replay">もう一度遊ぶ</button><!-- <button class="secondary" id="btn-result-close">やめる</button> --></div>
+    </section>
+  </main>
+
+  <script>
+    // ============================================================
+    // Game Plaza Platform SDK
+    // 外部ゲームがプラットフォームと通信するための共通インターフェース
+    // ============================================================
+
+    /**
+     * プラットフォーム通信SDK
+     * - プラットフォームからのゲーム開始メッセージを受信
+     * - プラットフォームにゲーム結果を送信
+     * - プラットフォームにゲーム終了を通知
+     */
+    const GamePlazaSDK = {
+      /** 受信したプレイヤー情報 */
+      players: [],
+      /** ローカルプレイヤー（操作者） */
+      localPlayer: null,
+      /** ゲームタイプ */
+      gameType: null,
+
+      /**
+       * 初期化: プラットフォームからの game_start メッセージを待ち受ける
+       * @param {function} onGameStart - ゲーム開始時のコールバック
+       */
+      init(onGameStart) {
+        window.addEventListener('message', (event) => {
+          const data = event.data;
+          if (!data || data.type !== 'game_start') return;
+
+          this.players = data.players || [];
+          this.localPlayer = this.players.find(p => p.isLocal) || null;
+          this.gameType = data.gameType;
+
+          if (onGameStart) {
+            onGameStart({
+              gameType: data.gameType,
+              players: this.players,
+              localPlayer: this.localPlayer,
+            });
+          }
+        });
+      },
+
+      /**
+       * ゲーム結果を送信してプラットフォームに通知する
+       * @param {string|null} winnerId - 勝者のUUID（引き分けの場合はnull）
+       * @param {Object} [scores] - スコア情報（任意）
+       */
+      sendResult(winnerId, scores = {}) {
+        window.parent.postMessage({
+          type: 'game_result',
+          winnerId: winnerId,
+          scores: scores,
+        }, '*');
+      },
+
+      /**
+       * ゲームを閉じることをプラットフォームに通知する
+       * （結果を送らずに閉じたい場合に使用）
+       */
+      sendClose() {
+        window.parent.postMessage({ type: 'game_close' }, '*');
+      },
+    };
+
+    // ============================================================
+    // ゲームロジック（ここを書き換えてゲームを実装する）
+    // ============================================================
+
+    const menuData = [
+      { key: 'staple', label: '主食', hint: 'エネルギー', choices: [
+        { name: '雑穀ごはん', note: '食物繊維 +', nutrients: ['grain'], colors: ['brown'], cost: 3 },
+        { name: '白ごはん', note: '定番の味', nutrients: ['grain'], colors: ['white'], cost: 2 },
+        { name: '冷やしうどん', note: 'つるっと軽め', nutrients: ['grain'], colors: ['white'], cost: 2 },
+        { name: '玄米おにぎり', note: '腹持ち良好', nutrients: ['grain'], colors: ['brown'], cost: 3 },
+        { name: '激辛カレー大盛り', note: '刺激たっぷり', nutrients: ['grain'], colors: ['red'], cost: 6, bad: true },
+      ]},
+      { key: 'main', label: '主菜', hint: 'たんぱく質', choices: [
+        { name: '鮭の塩焼き', note: '魚・赤', nutrients: ['protein', 'fish'], colors: ['red'], cost: 5 },
+        { name: '鶏むね照り焼き', note: '肉・高たんぱく', nutrients: ['protein'], colors: ['brown'], cost: 4 },
+        { name: '豆腐ハンバーグ', note: '大豆・やさしい', nutrients: ['protein', 'soy'], colors: ['brown'], cost: 3 },
+        { name: '豚しゃぶサラダ', note: '肉・野菜も', nutrients: ['protein'], colors: ['red', 'green'], cost: 5 },
+        { name: '特大ステーキ', note: 'ボリューム満点', nutrients: ['protein'], colors: ['red'], cost: 10, bad: true },
+      ]},
+      { key: 'side', label: '副菜', hint: 'ビタミン', choices: [
+        { name: 'ほうれん草のおひたし', note: '鉄分・緑', nutrients: ['vegetable'], colors: ['green'], cost: 2 },
+        { name: 'かぼちゃ煮', note: 'カロテン・黄', nutrients: ['vegetable'], colors: ['yellow'], cost: 2 },
+        { name: 'トマトのマリネ', note: 'リコピン・赤', nutrients: ['vegetable'], colors: ['red'], cost: 2 },
+        { name: 'ひじきと豆のサラダ', note: 'ミネラル', nutrients: ['vegetable', 'soy'], colors: ['black', 'green'], cost: 3 },
+        { name: '揚げ物三種盛り', note: 'カリカリ食感', nutrients: ['vegetable'], colors: ['brown'], cost: 8, bad: true },
+      ]},
+      { key: 'soup', label: '汁物', hint: '水分・野菜', choices: [
+        { name: '具だくさん味噌汁', note: '野菜たっぷり', nutrients: ['vegetable', 'soy'], colors: ['brown', 'green'], cost: 2 },
+        { name: 'わかめスープ', note: 'すっきり', nutrients: ['vegetable'], colors: ['green'], cost: 1 },
+        { name: 'けんちん汁', note: '根菜ごろごろ', nutrients: ['vegetable'], colors: ['brown'], cost: 3 },
+        { name: 'たまごスープ', note: 'ふんわり', nutrients: ['protein'], colors: ['yellow'], cost: 2 },
+        { name: '塩分MAXラーメン', note: '濃厚スープ', nutrients: ['grain', 'protein'], colors: ['brown'], cost: 7, bad: true },
+      ]},
+      { key: 'dessert', label: 'デザート', hint: '楽しみの一品', choices: [
+        { name: '季節のくだもの', note: 'ビタミン・彩り', nutrients: ['fruit'], colors: ['red'], cost: 3 },
+        { name: 'ヨーグルト', note: 'カルシウム', nutrients: ['dairy'], colors: ['white'], cost: 2 },
+        { name: '抹茶プリン', note: 'ほろ苦い甘さ', nutrients: ['dairy'], colors: ['green'], cost: 3 },
+        { name: '小さなアイス', note: 'ごほうび', nutrients: ['dairy'], colors: ['white'], cost: 2 },
+        { name: '生クリーム山盛りパフェ', note: '甘さたっぷり', nutrients: ['dairy'], colors: ['white'], cost: 8, bad: true },
+      ]},
+    ];
+    const selected = {};
+    const elements = {
+      categories: document.getElementById('categories'), menuItems: document.getElementById('menu-items'), score: document.getElementById('score'),
+      fill: document.getElementById('meter-fill'), balance: document.getElementById('balance-score'), color: document.getElementById('color-score'), penalty: document.getElementById('penalty-score'),
+      budget: document.getElementById('budget-score'), variety: document.getElementById('variety-score'), tip: document.getElementById('tip'),
+      submit: document.getElementById('submit'), status: document.getElementById('status'), playerInfo: document.getElementById('player-info'), layout: document.querySelector('.layout'),
+      resultScreen: document.getElementById('result-screen'), resultScore: document.getElementById('result-score'), resultComment: document.getElementById('result-comment'),
+    };
+
+    function renderChoices() {
+      elements.categories.innerHTML = menuData.map(category => `
+        <div class="category"><div class="category-title">${category.label}<span>${category.hint}</span></div>
+        <div class="choices">${category.choices.map((choice, index) => `<button class="choice${choice.bad ? ' danger' : ''}" data-category="${category.key}" data-index="${index}"><span class="food">${choice.name}</span><span class="detail">${choice.note}</span></button>`).join('')}</div></div>`).join('');
+      elements.categories.querySelectorAll('.choice').forEach(button => button.addEventListener('click', () => {
+        selected[button.dataset.category] = menuData.find(category => category.key === button.dataset.category).choices[button.dataset.index];
+        elements.categories.querySelectorAll(`[data-category="${button.dataset.category}"]`).forEach(choice => choice.classList.remove('selected'));
+        button.classList.add('selected');
+        updateScore();
+      }));
+    }
+
+    function calculateScore() {
+      const dishes = Object.values(selected);
+      const nutrients = new Set(dishes.flatMap(dish => dish.nutrients));
+      const colors = new Set(dishes.flatMap(dish => dish.colors));
+      const totalCost = dishes.reduce((sum, dish) => sum + dish.cost, 0);
+      const balance = Math.min(35, nutrients.size * 6 + (nutrients.has('grain') && nutrients.has('protein') ? 5 : 0));
+      const color = Math.min(25, colors.size * 5);
+      const budget = dishes.length === 0 ? 0 : (totalCost <= 13 ? 20 : Math.max(8, 20 - (totalCost - 13) * 3));
+      const variety = dishes.length * 4;
+      const penalty = dishes.filter(dish => dish.bad).length * 40;
+      return { balance, color, budget, variety, penalty, total: balance + color + budget + variety - penalty, totalCost };
+    }
+
+    function updateScore() {
+      const result = calculateScore();
+      const count = Object.keys(selected).length;
+      elements.menuItems.innerHTML = count ? menuData.filter(category => selected[category.key]).map(category => `<div class="menu-item"><span>${category.label}</span><strong>${selected[category.key].name}</strong></div>`).join('') : '<div class="empty">まだ料理が選ばれていません</div>';
+      elements.score.textContent = result.total;
+      elements.fill.style.width = `${Math.max(0, result.total)}%`;
+      elements.balance.textContent = `${result.balance} / 35`;
+      elements.color.textContent = `${result.color} / 25`;
+      elements.budget.textContent = `${result.budget} / 20`;
+      elements.variety.textContent = `${result.variety} / 20`;
+      elements.penalty.textContent = result.penalty ? `-${result.penalty}点` : '0点';
+      elements.submit.disabled = count !== menuData.length;
+      elements.tip.textContent = count === menuData.length ? (result.total >= 85 ? 'すばらしい献立！ 自信を持って決定しましょう。' : 'あと少し工夫できそうですが、献立は完成です。') : `あと${menuData.length - count}品選ぶと、献立を決定できます。`;
+    }
+
+    GamePlazaSDK.init(({ gameType, players }) => {
+      const names = players.map(player => player.userName || player.uuid.slice(0, 8)).join(', ');
+      elements.playerInfo.textContent = `ゲーム: ${gameType} | プレイヤー: ${names}`;
+      elements.status.textContent = '献立づくりスタート！';
+    });
+
+    elements.submit.addEventListener('click', () => {
+      const result = calculateScore();
+      const winnerId = GamePlazaSDK.localPlayer?.uuid || null;
+      GamePlazaSDK.sendResult(winnerId, { score: result.total, budget: result.totalCost });
+      elements.resultScore.textContent = result.total;
+      elements.resultComment.textContent = result.total >= 85 ? '栄養も彩りもばっちり！' : result.total >= 60 ? 'なかなかバランスのよい献立です。' : '次は料理の組み合わせを見直してみよう。';
+      elements.layout.classList.add('hidden');
+      elements.resultScreen.classList.remove('hidden');
+    });
+
+    function closeGame() {
+      GamePlazaSDK.sendClose();
+      elements.status.textContent = 'ゲームを終了しました。';
+    }
+
+    // 「やめる」ボタンは現在非表示
+    document.getElementById('btn-replay').addEventListener('click', () => {
+      Object.keys(selected).forEach(key => delete selected[key]);
+      renderChoices();
+      updateScore();
+      elements.resultScreen.classList.add('hidden');
+      elements.layout.classList.remove('hidden');
+      elements.status.textContent = '新しい献立づくりを始めよう！';
+    });
+
+    renderChoices();
+    updateScore();
+  </script>
+</body>
+</html>
